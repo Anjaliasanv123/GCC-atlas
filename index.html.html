@@ -1,0 +1,505 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>GCC Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a reconciliation ledger. Every figure sits in a row with its sources, and the gap between sources is the headline. */
+:root{
+  --paper:#EFF2EE; --panel:#FBFCFA; --ink:#13201A; --ink2:#4A5850; --rule:#D3DAD2;
+  --accent:#2540D9; --accent-soft:#E3E8FB; --bar:#9DB0A4; --bar-hi:#13201A;
+  --ca:#1C7A4D; --cb:#8F6200; --cc:#AE3A2D; --gap:#AE3A2D; --gap-soft:#F6E3E0;
+  --f-display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0E1511; --panel:#16201A; --ink:#E8EFE9; --ink2:#A2B2A8; --rule:#2A372E;
+  --accent:#93A6FF; --accent-soft:#1E2744; --bar:#51655A; --bar-hi:#E8EFE9;
+  --ca:#5FD197; --cb:#E0B24A; --cc:#FF8F80; --gap:#FF8F80; --gap-soft:#3A1F1B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0E1511; --panel:#16201A; --ink:#E8EFE9; --ink2:#A2B2A8; --rule:#2A372E;
+  --accent:#93A6FF; --accent-soft:#1E2744; --bar:#51655A; --bar-hi:#E8EFE9;
+  --ca:#5FD197; --cb:#E0B24A; --cc:#FF8F80; --gap:#FF8F80; --gap-soft:#3A1F1B; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.55 var(--f-body);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+
+/* masthead */
+.mast{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:28px;align-items:end;padding-bottom:22px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:500 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin-bottom:12px}
+h1{font-size:clamp(40px,7vw,68px);line-height:.95;font-weight:800;letter-spacing:-.02em}
+.lede{font-size:18px;line-height:1.4;margin:14px 0 0;max-width:46ch}
+.lede b{background:var(--gap-soft);color:var(--ink);padding:0 3px;font-weight:600}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--rule);background:var(--panel)}
+.fact{padding:12px 14px;border-right:1px solid var(--rule)}
+.fact:last-child{border-right:0}
+.fact b{display:block;font:500 22px/1.1 var(--f-mono)}
+.fact span{font-size:11.5px;color:var(--ink2);line-height:1.3;display:block;margin-top:4px}
+.asof{grid-column:1/-1;font:400 12px/1.4 var(--f-mono);color:var(--ink2)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:18px 0 22px}
+.tab{appearance:none;border:1px solid var(--rule);background:var(--panel);color:var(--ink);font:500 14px/1 var(--f-body);padding:11px 16px;cursor:pointer;border-radius:4px}
+.tab small{font:400 11px var(--f-mono);color:var(--ink2);margin-left:6px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tab[aria-selected="true"] small{color:var(--paper);opacity:.75}
+.tab:focus-visible,button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.sechead{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.sechead h2{font-size:26px;font-weight:800;letter-spacing:-.01em}
+.sechead p{margin:4px 0 0;color:var(--ink2);max-width:62ch}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+.conf{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font:600 11px/1 var(--f-mono);color:var(--paper)}
+.c-A{background:var(--ca)} .c-B{background:var(--cb)} .c-C{background:var(--cc)}
+
+/* ledger */
+.metric{background:var(--panel);border:1px solid var(--rule);margin-bottom:14px}
+.mhead{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;padding:14px 16px;border-bottom:1px solid var(--rule)}
+.mhead h3{font-size:18px;font-weight:600}
+.spread{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{font:500 12px/1 var(--f-mono);padding:6px 8px;border-radius:3px;background:var(--gap-soft);color:var(--gap);white-space:nowrap}
+.range{font-size:12.5px;color:var(--ink2)}
+.srcs{list-style:none;margin:0;padding:0}
+.src{display:grid;grid-template-columns:26px minmax(0,1.2fr) minmax(0,1fr) minmax(86px,auto);gap:6px 14px;align-items:center;padding:11px 16px;border-bottom:1px dashed var(--rule)}
+.src:last-child{border-bottom:0}
+.sname{min-width:0;font-weight:500;overflow-wrap:anywhere}
+.snote{display:block;font-weight:400;font-size:12.5px;color:var(--ink2)}
+.track{height:10px;background:color-mix(in srgb,var(--rule) 55%,transparent);position:relative}
+.fill{position:absolute;left:0;top:0;bottom:0;background:var(--bar)}
+.fill.hi{background:var(--bar-hi)}
+.val{text-align:right;font-size:14px;white-space:nowrap}
+.why{margin:0;padding:12px 16px;background:color-mix(in srgb,var(--rule) 30%,transparent);font-size:13.5px;color:var(--ink2);border-top:1px solid var(--rule)}
+.why b{color:var(--ink)}
+
+/* cities */
+.panel{background:var(--panel);border:1px solid var(--rule)}
+.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding:16px}
+.ctl label{display:flex;justify-content:space-between;font-weight:500;margin-bottom:8px}
+.ctl output{font-family:var(--f-mono)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.city{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) minmax(110px,auto);gap:6px 16px;padding:14px 16px;border-top:1px solid var(--rule);align-items:center}
+.city h3{font-size:17px;font-weight:600}
+.city .rank{font:500 11px var(--f-mono);color:var(--ink2)}
+.cbar{height:14px;background:color-mix(in srgb,var(--rule) 55%,transparent)}
+.cbar i{display:block;height:100%;background:var(--bar-hi)}
+.cval{text-align:right}
+.cval b{font:500 17px var(--f-mono);display:block}
+.cval span{font:400 12px var(--f-mono);color:var(--ink2)}
+.cdetail{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--ink2)}
+.cdetail b{color:var(--ink);font-weight:500}
+.na{color:var(--gap)}
+.gaps{margin-top:16px;padding:14px 16px;border:1px dashed var(--gap);background:var(--gap-soft)}
+.gaps h3{font-size:15px;margin-bottom:6px;color:var(--ink)}
+.gaps ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink)}
+.fine{font-size:12.5px;color:var(--ink2);margin:10px 2px 0}
+
+/* policies */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{appearance:none;border:1px solid var(--rule);background:var(--panel);color:var(--ink);font:500 13px/1 var(--f-body);padding:9px 12px;border-radius:99px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.prow{display:grid;grid-template-columns:130px minmax(0,1.5fr) minmax(0,1.2fr) 190px;gap:6px 16px;padding:13px 16px;border-top:1px solid var(--rule);align-items:start}
+.prow:first-child{border-top:0}
+.prow h3{font-size:16px;font-weight:600}
+.badge{display:inline-block;font:500 11.5px/1.2 var(--f-mono);padding:5px 7px;border-radius:3px}
+.bd-off{background:var(--ca);color:var(--paper)}
+.bd-rep{background:var(--accent-soft);color:var(--ink)}
+.bd-dr{background:transparent;border:1px dashed var(--ink2);color:var(--ink2)}
+.pmeta{font-size:13px;color:var(--ink2)}
+.nat{margin-top:14px;padding:14px 16px;border:1px solid var(--rule);background:var(--panel);font-size:14px}
+.nat b{font-family:var(--f-display)}
+
+/* ask */
+.askbox{display:flex;gap:8px;flex-wrap:wrap}
+.askbox input{flex:1 1 280px;min-width:0;padding:13px 14px;border:1px solid var(--ink2);background:var(--panel);color:var(--ink);font:400 15px var(--f-body);border-radius:4px}
+.btn{appearance:none;border:0;background:var(--ink);color:var(--paper);font:600 14px var(--f-body);padding:13px 20px;border-radius:4px;cursor:pointer}
+.btn[disabled]{opacity:.55;cursor:wait}
+.sugg{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
+.ans{padding:18px;min-height:120px}
+.ans .q{font:500 12px var(--f-mono);color:var(--ink2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}
+.ans p{margin:0 0 10px;max-width:70ch;white-space:pre-wrap}
+.ans .by{font:400 12px var(--f-mono);color:var(--ink2);margin-top:12px}
+.srcline{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.srcline a{font:400 12px var(--f-mono);padding:4px 7px;border:1px solid var(--rule);border-radius:3px;text-decoration:none;color:var(--accent)}
+.empty{color:var(--ink2)}
+
+footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);display:grid;gap:6px}
+
+@media (max-width:760px){
+  .mast{grid-template-columns:minmax(0,1fr)}
+  .controls{grid-template-columns:minmax(0,1fr)}
+  .src{grid-template-columns:26px minmax(0,1fr) auto;}
+  .src .track{grid-column:2/3;grid-row:2}
+  .src .val{grid-column:3/4;grid-row:1/3;align-self:center}
+  .city{grid-template-columns:minmax(0,1fr) auto}
+  .city .cbar{grid-column:1/-1;grid-row:2}
+  .prow{grid-template-columns:minmax(0,1fr)}
+  .facts{grid-template-columns:minmax(0,1fr)}
+  .fact{border-right:0;border-bottom:1px solid var(--rule)}
+  .fact:last-child{border-bottom:0}
+}
+@media (prefers-reduced-motion:no-preference){.fill,.cbar i{transition:width .35s ease}}
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <div class="eyebrow">Prototype · India GCC ecosystem</div>
+      <h1>GCC Atlas</h1>
+      <p class="lede">Every number about India's global capability centres, shown next to the reports that <b>disagree</b> about it.</p>
+    </div>
+    <div class="facts" aria-label="Headline figures">
+      <div class="fact"><b>2,117</b><span>GCCs in India, FY26</span></div>
+      <div class="fact"><b>2.36M</b><span>people employed</span></div>
+      <div class="fact"><b>$98.4B</b><span>revenue booked</span></div>
+    </div>
+    <div class="asof">Zinnov–Nasscom India GCC Landscape FY26 · data compiled 19 Oct 2026 from public reports · built for a company deciding where to set up</div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Atlas sections">
+    <button class="tab" role="tab" id="t-ledger" aria-controls="p-ledger" aria-selected="true">Conflict ledger <small id="n-ledger"></small></button>
+    <button class="tab" role="tab" id="t-cities" aria-controls="p-cities" aria-selected="false">City compare</button>
+    <button class="tab" role="tab" id="t-policy" aria-controls="p-policy" aria-selected="false">State policies <small id="n-policy"></small></button>
+    <button class="tab" role="tab" id="t-ask" aria-controls="p-ask" aria-selected="false">Ask Atlas</button>
+  </nav>
+
+  <section id="p-ledger" role="tabpanel" aria-labelledby="t-ledger">
+    <div class="sechead">
+      <div>
+        <h2>Conflict ledger</h2>
+        <p>Same question, different answers. Each metric lists every source we found, with the size of the gap and the likely reason.</p>
+      </div>
+      <div class="legend" aria-label="Confidence key">
+        <span><i class="conf c-A">A</i> report or official page</span>
+        <span><i class="conf c-B">B</i> news on a report</span>
+        <span><i class="conf c-C">C</i> vendor or unverified</span>
+      </div>
+    </div>
+    <div id="ledger"></div>
+  </section>
+
+  <section id="p-cities" role="tabpanel" aria-labelledby="t-cities" hidden>
+    <div class="sechead">
+      <div>
+        <h2>City compare</h2>
+        <p>Set a team size and see what each metro costs in engineering payroll, next to where GCCs are actually leasing and which state policy applies.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="controls">
+        <div class="ctl"><label for="size">Team size <output id="size-o" class="mono"></output></label><input id="size" type="range" min="50" max="2000" step="50" value="500"></div>
+        <div class="ctl"><label for="senior">Senior share (6+ years) <output id="senior-o" class="mono"></output></label><input id="senior" type="range" min="0" max="60" step="5" value="30"></div>
+      </div>
+      <div id="cities"></div>
+    </div>
+    <p class="fine">Payroll indicator = team size × (senior share × senior median + rest × software engineer median). It covers engineering roles only. It leaves out rent, tax, benefits, hiring fees and non-engineering roles. Salary medians are Flexiple's tracked-market figures (as of Aug 2026), not GCC-only pay.</p>
+    <div class="gaps">
+      <h3>Not in Atlas yet, because no verified source was found</h3>
+      <ul>
+        <li>City-level office rents. Only the pan-India average is sourced: ₹96 per sq ft per month, up 9% year on year, H1 2026 (one Mumbai GCC lease, Julius Baer, is at ₹215).</li>
+        <li>GCC counts for Chennai, Mumbai and Delhi NCR, and any count for tier-2 cities as a group.</li>
+        <li>Attrition and time-to-hire by city.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="p-policy" role="tabpanel" aria-labelledby="t-policy" hidden>
+    <div class="sechead">
+      <div>
+        <h2>State policies</h2>
+        <p>Who has a GCC policy, what it targets, and whether we could find the official document or only a report about it.</p>
+      </div>
+    </div>
+    <div class="chips" id="pchips" role="group" aria-label="Filter by verification status"></div>
+    <div class="panel" id="plist"></div>
+    <div class="nat"><b>National level.</b> There is no single national GCC policy. The Union Budget 2026–27 proposed a revised safe-harbour transfer-pricing margin for GCCs (reported at 15.5%) and faster advance pricing agreements. Early coverage said final rules were still to be notified, so check the notification before relying on it. <a href="https://www.ey.com/en_in/media/podcasts/budget-insights/2026/03/the-future-of-global-capability-centers-in-india-policy-shifts" target="_blank" rel="noopener">EY on Budget 2026</a></div>
+  </section>
+
+  <section id="p-ask" role="tabpanel" aria-labelledby="t-ask" hidden>
+    <div class="sechead">
+      <div>
+        <h2>Ask Atlas</h2>
+        <p>Questions are answered only from the data in this prototype, with the sources listed. If Atlas has no verified figure, it says so.</p>
+      </div>
+    </div>
+    <form class="askbox" id="askform">
+      <input id="askq" type="text" autocomplete="off" aria-label="Your question" placeholder="Bengaluru vs Hyderabad for a 500-person GCC">
+      <button class="btn" id="askbtn" type="submit">Ask</button>
+    </form>
+    <div class="sugg" id="sugg"></div>
+    <div class="panel ans" id="ans" aria-live="polite"><p class="empty">Pick a question above or type your own.</p></div>
+  </section>
+
+  <footer>
+    <div><b>Source confidence.</b> A: a published report or official page. B: news coverage of a report. C: vendor material or an unverified post. Nothing in Atlas is estimated by Atlas.</div>
+    <div>Atlas is a prototype for the Flexiple Product Intern assignment. It is not an official Flexiple product, and its figures should be re-checked at the source before any decision.</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+
+/* ---------- DATA (all from the research brief, 19 Oct 2026) ---------- */
+var U={
+ cx:"https://cxotoday.com/others/from-delivery-engines-to-ai-nerve-centers-indias-gccs-take-the-global-lead/",
+ vest:"https://therealtytoday.com/news/india-leads-global-gcc-expansion-projected-to-cross-2100-centers-by-fy28-amid-tier-2-city-surge-vestian-report",
+ ocean:"https://www.oceanfrogs.com/blogs/global-capabilty-centers/",
+ jll:"https://www.jll.com/en-in/newsroom/india-s-gcc-expansion-hits-record-31-million",
+ cw:"https://newsable.asianetnews.com/business/gcc-leasing-surges-38-in-h1-2026-bengaluru-remains-top-market-articleshow-fc71mzn",
+ col:"https://www.constructionworld.in/latest-construction-news/real-estate-news/julius-baer-leases-74037-sq-ft-office-in-mumbai/96119",
+ kf:"https://www.outlookbusiness.com/corporate/foreign-bfsi-firms-setting-up-more-gccs-rent-highest-732-mn-sq-ft-office-space-in-h1-knight-frank",
+ un:"https://www.newkerala.com/news/a/gccs-tightening-supply-keep-indias-office-market-growth-703.htm",
+ flx:"https://flexiple.com/gcc/statistics",
+ cbre:"https://india.entrepreneur.com/business-news/states-target-1-1-mn-gcc-jobs-by-2031-cbre",
+ cbre2:"https://cxotoday.com/others/state-policies-target-over-1-1-million-gcc-jobs-by-2031-cbre-report/",
+ mh:"https://industry.maharashtra.gov.in/sites/default/files/2025-09/gcc-policy-paraesa-naota-english.pdf",
+ ansr:"https://ansr.com/ansr-vs-others/",
+ scalers:"https://thescalers.com/best-companies-to-help-you-build-a-gcc-in-india/",
+ ka:"https://eitbt.karnataka.gov.in/it/public/policy5/en",
+ gj:"https://dst.gujarat.gov.in/Home/GujaratGlobalCapabilityCenter",
+ tn:"https://www.ey.com/en_in/insights/consulting/exploring-the-shift-gccs-moving-to-tier-2-cities-for-cost-and-talent-advantages",
+ law:"https://law.asia/india-gcc-growth/",
+ upet:"https://invest.up.gov.in/wp-content/uploads/2024/12/Indian-GCC_091224.pdf"
+};
+
+var LEDGER=[
+ {id:"m1",name:"Number of GCCs in India",unit:"GCCs",why:"Nasscom–Zinnov counts parent companies (and 3,728 individual units). Vestian counts centres in an earlier year. A vendor database adds companies that are not in Nasscom's list.",
+  s:[
+   {n:"Zinnov–Nasscom, FY26",v:2117,t:"2,117",note:"Parent companies; 3,728 units",c:"A",u:U.cx},
+   {n:"Vestian, 2025",v:1700,t:"~1,700",note:"Centres in top-6 cities = 94%",c:"B",u:U.vest},
+   {n:"OceanFrogs database",v:2232,t:"2,232",note:"Sales-intelligence vendor",c:"C",u:U.ocean}]},
+ {id:"m2",name:"GCCs in Bengaluru",unit:"GCCs",why:"JLL counts units (one company can run several). Vestian counts GCCs. The LinkedIn range is a post by an industry executive and cites no method.",
+  s:[
+   {n:"Vestian",v:487,t:"487",note:"GCCs",c:"B",u:U.vest},
+   {n:"JLL India GCC Guide 2026",v:900,t:"900+",note:"GCC units",c:"B",u:U.jll},
+   {n:"LinkedIn post, industry executive",v:850,t:"800–900+",note:"No source cited",c:"C",u:null}]},
+ {id:"m3",name:"GCC office leasing, H1 2026",unit:"MSF",why:"Different city sets (7, 8 or 9 cities), different definitions of a GCC lease, and one report in this set does not name its publisher in the article.",
+  s:[
+   {n:"Cushman & Wakefield",v:16.5,t:"16.5 MSF",note:"Top 8 markets",c:"B",u:U.cw},
+   {n:"Colliers",v:16.6,t:"16.6 MSF",note:"Top 7 cities",c:"B",u:U.col},
+   {n:"Unnamed report, Business India",v:19.2,t:"19.2 MSF",note:"Top 7 cities; publisher not named",c:"C",u:U.un},
+   {n:"Knight Frank",v:20.6,t:"20.6 MSF",note:"8 cities; foreign-firm GCC setups",c:"B",u:U.kf}]},
+ {id:"m4",name:"GCC share of office leasing, H1 2026",unit:"%",why:"The denominator changes. Each firm measures total leasing over a different set of cities and building grades.",
+  s:[
+   {n:"Cushman & Wakefield",v:38,t:"38%",note:"Share of total office leasing",c:"B",u:U.cw},
+   {n:"Unnamed report, Business India",v:45,t:"45%",note:"Share of gross leasing, top 7 cities",c:"C",u:U.un},
+   {n:"Colliers",v:46,t:"46%",note:"Share of Grade A uptake, top 7 cities",c:"B",u:U.col}]},
+ {id:"m5",name:"GCC office leasing, calendar 2025",unit:"MSF",why:"Colliers' figure is quoted second-hand on Flexiple's statistics page, which itself treats the two as a range.",
+  s:[
+   {n:"Colliers, as cited by Flexiple",v:28,t:"~28 MSF",note:"Second-hand",c:"B",u:U.flx},
+   {n:"JLL India",v:31,t:"31 MSF",note:"Record year",c:"B",u:U.jll}]},
+ {id:"m6",name:"Maharashtra's GCC target by 2030",unit:"new GCCs",why:"CBRE reports about 200 centres. The state policy, as cited by Flexiple, says about 400. Targets may count different things, such as centres versus units.",
+  s:[
+   {n:"CBRE, Aug 2026",v:200,t:"~200",note:"Plus 4 lakh jobs",c:"B",u:U.cbre},
+   {n:"Maharashtra GCC Policy 2025, via Flexiple",v:400,t:"~400",note:"About 4 lakh skilled jobs",c:"A",u:U.mh}]},
+ {id:"m7",name:"GCCs set up by ANSR (a setup provider)",unit:"GCCs",why:"Two figures appear on ANSR's own comparison page, and a third-party roundup quotes a higher number. This is the provider-verification problem in miniature.",
+  s:[
+   {n:"ANSR website, one claim",v:135,t:"135",note:"\"135 GCCs established\"",c:"C",u:U.ansr},
+   {n:"ANSR website, another claim",v:150,t:"150+",note:"\"150+ successful GCCs\"",c:"C",u:U.ansr},
+   {n:"Third-party blog roundup",v:210,t:"210+",note:"\"documented GCC setups\"",c:"C",u:U.scalers}]}
+];
+
+/* salary medians: Flexiple tracked-market figures, lakh per year, Aug 2026 */
+var CITIES=[
+ {id:"blr",name:"Bengaluru",al:["bengaluru","bangalore","blr"],swe:15.7,sr:32.5,h1:"5.36 MSF GCC leasing in H1 2026 (largest market)",share:"34–39% of India's GCC market (JLL)",pol:"Karnataka GCC Policy 2024–29",polS:"Official source cited",ps:[U.cw,U.jll,U.ka]},
+ {id:"hyd",name:"Hyderabad",al:["hyderabad","hyd"],swe:10.4,sr:24.2,h1:null,share:"20–23% of GCC office demand (JLL); GCCs were 37% of Q2 2026 leasing (C&W)",pol:"Telangana: framework reported, no official document found",polS:"Reported only",ps:[U.jll,U.cw,U.cbre]},
+ {id:"chn",name:"Chennai",al:["chennai","madras"],swe:7.6,sr:19.1,h1:null,share:"GCCs were 46% of Q2 and a record 51% of H1 2026 leasing (C&W)",pol:"Tamil Nadu payroll subsidy scheme, to Mar 2027",polS:"Official source cited",ps:[U.cw,U.flx]},
+ {id:"pun",name:"Pune",al:["pune"],swe:9.5,sr:22.3,h1:"3.01 MSF GCC leasing in H1 2026",share:"15–20% of national GCC activity (JLL); 52% of Q2 leasing (C&W)",pol:"Maharashtra GCC Policy 2025",polS:"Official source cited",ps:[U.cw,U.jll,U.mh]},
+ {id:"mum",name:"Mumbai",al:["mumbai","bombay"],swe:9.7,sr:22.8,h1:"2.23 MSF GCC leasing in H1 2026",share:"BFSI-led; one lease at ₹215 per sq ft per month (Colliers)",pol:"Maharashtra GCC Policy 2025",polS:"Official source cited",ps:[U.cw,U.col,U.mh]},
+ {id:"del",name:"Delhi NCR",al:["delhi","ncr","gurugram","gurgaon","noida"],swe:14.1,sr:24.0,h1:"2.37 MSF GCC leasing in H1 2026",share:"No verified city share",pol:"Haryana (Gurugram) and Uttar Pradesh (Noida) policies; Delhi framework",polS:"Reported only",ps:[U.cw,U.cbre,U.law]}
+];
+
+var POL=[
+ {st:"Karnataka",k:"off",kind:"Dedicated policy, 2024–29",target:"~500 new GCCs, 3.5 lakh jobs by 2029",note:"Includes a Beyond Bengaluru incentive tier for centres outside the capital.",u:U.ka},
+ {st:"Maharashtra",k:"off",kind:"Dedicated policy, 2025",target:"~400 GCCs, ~4 lakh jobs by 2030 (CBRE reports ~200 centres)",note:"Incentives steer centres to Nagpur, Nashik and Chhatrapati Sambhajinagar.",u:U.mh},
+ {st:"Gujarat",k:"off",kind:"Dedicated policy, 2025–30",target:"At least 250 GCC units, 50,000+ jobs, ₹10,000 crore investment",note:"Published by the state's Department of Science and Technology.",u:U.gj},
+ {st:"Tamil Nadu",k:"off",kind:"Payroll subsidy scheme, to Mar 2027",target:"50 GCCs",note:"Only Forbes Global 2000 or Fortune 1000 parents committing 200+ direct jobs.",u:U.tn},
+ {st:"Madhya Pradesh",k:"rep",kind:"Dedicated policy (CBRE)",target:"50+ GCCs, 37,000+ jobs by 2029",note:"No official document fetched.",u:U.cbre2},
+ {st:"Haryana",k:"rep",kind:"GCC Policy 2025 (reported)",target:"Led by Gurugram",note:"No official document fetched.",u:U.law},
+ {st:"Uttar Pradesh",k:"rep",kind:"Dedicated policy (CBRE); a 2024 draft is online",target:"Led by Noida",note:"Final notified text not found.",u:U.upet},
+ {st:"Andhra Pradesh",k:"rep",kind:"Dedicated policy (CBRE)",target:"Not stated in sources found",note:"No official document fetched.",u:U.cbre},
+ {st:"Rajasthan",k:"rep",kind:"Dedicated policy (CBRE)",target:"Not stated in sources found",note:"No official document fetched.",u:U.cbre},
+ {st:"Telangana",k:"rep",kind:"Framework (CBRE)",target:"Land subsidies, electricity benefits, employment-linked support (reported)",note:"No official document fetched.",u:U.law},
+ {st:"Delhi",k:"rep",kind:"Framework (CBRE)",target:"Not stated in sources found",note:"No official document fetched.",u:U.cbre},
+ {st:"Kerala",k:"dr",kind:"Draft policy",target:"~80 GCCs, 1.6 lakh jobs",note:"Proposed, not adopted per CBRE.",u:U.cbre2}
+];
+var KLAB={off:"Official source cited",rep:"Reported only",dr:"Draft"};
+var KCLS={off:"bd-off",rep:"bd-rep",dr:"bd-dr"};
+
+/* ---------- helpers ---------- */
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function fmt(n,d){return n.toLocaleString("en-IN",{minimumFractionDigits:d||0,maximumFractionDigits:d||0})}
+function spreadOf(m){var vs=m.s.map(function(x){return x.v}),lo=Math.min.apply(0,vs),hi=Math.max.apply(0,vs);return{lo:lo,hi:hi,pct:Math.round((hi-lo)/lo*100)}}
+function src(t,u){return u?'<a href="'+u+'" target="_blank" rel="noopener">'+esc(t)+'</a>':esc(t)}
+
+/* ---------- ledger ---------- */
+function renderLedger(){
+  var box=$("#ledger");box.innerHTML="";
+  LEDGER.forEach(function(m){
+    var sp=spreadOf(m),max=sp.hi,a=el("article","metric");
+    var unitTxt=m.unit==="%"?"%":" "+m.unit;
+    var h='<div class="mhead"><h3>'+esc(m.name)+'</h3><div class="spread"><span class="range mono">'+fmt(sp.lo,sp.hi<100?1:0).replace(/\.0$/,"")+' → '+fmt(sp.hi,sp.hi<100?1:0).replace(/\.0$/,"")+unitTxt+'</span><span class="pill">'+sp.pct+'% gap between sources</span></div></div><ul class="srcs">';
+    m.s.forEach(function(s){
+      h+='<li class="src"><i class="conf c-'+s.c+'" title="Confidence '+s.c+'">'+s.c+'</i><div class="sname">'+src(s.n,s.u)+'<span class="snote">'+esc(s.note)+'</span></div><div class="track"><div class="fill'+(s.v===max?' hi':'')+'" style="width:'+(s.v/max*100).toFixed(1)+'%"></div></div><div class="val mono">'+esc(s.t)+'</div></li>';
+    });
+    h+='</ul><p class="why"><b>Why they differ.</b> '+esc(m.why)+'</p>';
+    a.innerHTML=h;box.appendChild(a);
+  });
+  $("#n-ledger").textContent=LEDGER.length+" metrics";
+}
+
+/* ---------- cities ---------- */
+function payroll(c,size,sen){return size*(sen*c.sr+(1-sen)*c.swe)/100} /* lakh -> crore */
+function renderCities(){
+  var size=+$("#size").value,sen=+$("#senior").value/100;
+  $("#size-o").textContent=fmt(size)+" people";$("#senior-o").textContent=Math.round(sen*100)+"%";
+  var rows=CITIES.map(function(c){return{c:c,p:payroll(c,size,sen)}}).sort(function(a,b){return a.p-b.p});
+  var lo=rows[0].p,hi=rows[rows.length-1].p,box=$("#cities");box.innerHTML="";
+  rows.forEach(function(r,i){
+    var c=r.c,d=el("div","city");
+    var diff=i===0?"lowest of six":"+"+Math.round((r.p/lo-1)*100)+"% vs "+rows[0].c.name;
+    d.innerHTML='<div><div class="rank">#'+(i+1)+' by cost</div><h3>'+c.name+'</h3></div><div class="cbar"><i style="width:'+(r.p/hi*100).toFixed(1)+'%"></i></div><div class="cval"><b>₹'+fmt(r.p,1)+' cr</b><span>'+diff+'</span></div>'+
+     '<div class="cdetail"><span><b>Leasing:</b> '+(c.h1?esc(c.h1):'<span class="na">city figure not available</span>')+'</span><span><b>Activity:</b> '+esc(c.share)+'</span><span><b>Policy:</b> '+esc(c.pol)+' ('+esc(c.polS)+')</span></div>';
+    box.appendChild(d);
+  });
+}
+
+/* ---------- policies ---------- */
+var pf="all";
+function renderPolicy(){
+  var ch=$("#pchips");ch.innerHTML="";
+  [["all","All ("+POL.length+")"],["off",KLAB.off+" ("+POL.filter(function(p){return p.k==="off"}).length+")"],["rep",KLAB.rep+" ("+POL.filter(function(p){return p.k==="rep"}).length+")"],["dr",KLAB.dr+" ("+POL.filter(function(p){return p.k==="dr"}).length+")"]].forEach(function(f){
+    var b=el("button","chip",esc(f[1]));b.type="button";b.setAttribute("aria-pressed",String(pf===f[0]));
+    b.onclick=function(){pf=f[0];renderPolicy()};ch.appendChild(b);
+  });
+  var box=$("#plist");box.innerHTML="";
+  POL.filter(function(p){return pf==="all"||p.k===pf}).forEach(function(p){
+    var r=el("div","prow");
+    r.innerHTML='<h3>'+esc(p.st)+'</h3><div><div>'+esc(p.kind)+'</div><div class="pmeta">'+esc(p.target)+'</div></div><div class="pmeta">'+esc(p.note)+' '+src("Source",p.u)+'</div><div><span class="badge '+KCLS[p.k]+'">'+KLAB[p.k]+'</span></div>';
+    box.appendChild(r);
+  });
+  $("#n-policy").textContent=POL.length+" states";
+}
+
+/* ---------- ask: rule-based answers from the data above ---------- */
+function findCities(q){var out=[];CITIES.forEach(function(c){if(c.al.some(function(a){return new RegExp("\\b"+a+"\\b").test(q)}))out.push(c)});return out}
+function parseSize(q){var m=q.match(/(\d[\d,]*)\s*(people|person|employees|engineers|seats|headcount|member|strong)?/g)||[];for(var i=0;i<m.length;i++){var n=+m[i].replace(/[^\d]/g,"");if(n>=20&&n<=10000&&!/20(2|3)\d/.test(m[i]))return n}return 500}
+function lk(t,u){return{t:t,u:u}}
+function localAnswer(raw){
+  var q=raw.toLowerCase(),S=[],txt="",cs=findCities(q);
+  if(/rent|sq\.? ?ft|square f|lease cost|office cost|price per/.test(q)){
+    txt="Atlas has no verified city-level office rents, so it will not give you one.\n\nWhat is sourced: the average Grade A rent across the top 7 cities was ₹96 per sq ft per month in H1 2026, up 9% year on year. One Mumbai GCC lease (Julius Baer) is at ₹215 per sq ft per month with 5% annual escalation.";
+    S=[lk("Rents, H1 2026",U.un),lk("Mumbai lease, Colliers",U.col)];return{text:txt,src:S};
+  }
+  if(cs.length>=2||(cs.length===1&&/cost|salary|talent|payroll|cheap|expensive|setup|set up|good|how/.test(q)&&!/polic|incentive/.test(q))){
+    var size=parseSize(q),sen=0.3,list=cs.length?cs:CITIES;
+    var rows=list.map(function(c){return{c:c,p:payroll(c,size,sen)}}).sort(function(a,b){return a.p-b.p});
+    txt="For a "+fmt(size)+"-person team with a 30% senior share, indicative engineering payroll per year:\n";
+    rows.forEach(function(r){txt+="• "+r.c.name+": ₹"+fmt(r.p,1)+" crore\n"});
+    if(rows.length>1){txt+="\n"+rows[0].c.name+" is about "+Math.round((1-rows[0].p/rows[rows.length-1].p)*100)+"% cheaper than "+rows[rows.length-1].c.name+" on this measure.\n"}
+    txt+="\nWhere GCCs are going:\n";
+    rows.forEach(function(r){txt+="• "+r.c.name+": "+r.c.share+(r.c.h1?"; "+r.c.h1:"")+"\n";S=S.concat(r.c.ps.map(function(u){return lk(r.c.name,u)}))});
+    txt+="\nPolicy:\n";rows.forEach(function(r){txt+="• "+r.c.name+": "+r.c.pol+" ("+r.c.polS+")\n"});
+    txt+="\nThis covers software roles only (Flexiple market medians) and leaves out rent, tax and non-engineering roles. Atlas has no verified city-level rent.";
+    return{text:txt,src:dedupe(S)};
+  }
+  var st=POL.filter(function(p){return q.indexOf(p.st.toLowerCase())>-1});
+  if(st.length||/polic|incentive|subsid|state/.test(q)){
+    var L=st.length?st:POL.filter(function(p){return p.k==="off"});
+    txt=st.length?"":"States where an official policy or scheme document was found (the rest are reported only):\n\n";
+    L.forEach(function(p){txt+="• "+p.st+": "+p.kind+". "+p.target+". "+p.note+" ["+KLAB[p.k]+"]\n";S.push(lk(p.st,p.u))});
+    return{text:txt.trim(),src:S};
+  }
+  if(/leas/.test(q)){
+    var m3=LEDGER[2],m4=LEDGER[3];
+    txt="Sources disagree on GCC office leasing in H1 2026: "+spreadOf(m3).lo+" to "+spreadOf(m3).hi+" million sq ft, a "+spreadOf(m3).pct+"% gap. Shares of total leasing range from "+spreadOf(m4).lo+"% to "+spreadOf(m4).hi+"%.\n\nThe gap comes from different city sets (7, 8 or 9 cities), different definitions of a GCC lease, and one report in the set that does not name its publisher.";
+    return{text:txt,src:m3.s.concat(m4.s).filter(function(s){return s.u}).map(function(s){return lk(s.n,s.u)})};
+  }
+  if(/ansr|provider|consultant|advisor|trust|deliver/.test(q)){
+    var m7=LEDGER[6];
+    txt="Atlas cannot yet verify what any setup provider has delivered. For example, ANSR's own comparison page claims both 135 and 150+ GCCs, and a third-party roundup says 210+. Rankings of setup consultants are mostly published by providers that rank themselves first.\n\nProvider verification (named delivered GCCs, years, cities) is the next module.";
+    return{text:txt,src:m7.s.filter(function(s){return s.u}).map(function(s){return lk(s.n,s.u)})};
+  }
+  if(/how many|number of|count|total/.test(q)&&!/bengaluru|bangalore/.test(q)){
+    var m1=LEDGER[0];
+    txt="It depends on who counts. Nasscom–Zinnov says 2,117 GCCs (3,728 units) in FY26. Vestian says about 1,700 for an earlier period, and a vendor database lists 2,232. The widest gap is "+spreadOf(m1).pct+"%.\n\nThe main reason is counting units versus companies.";
+    return{text:txt,src:m1.s.map(function(s){return lk(s.n,s.u)})};
+  }
+  if(/bengaluru|bangalore/.test(q)){
+    var m2=LEDGER[1];
+    txt="Bengaluru GCC counts range from 487 (Vestian) to 900+ (JLL, counting units), a "+spreadOf(m2).pct+"% gap. A LinkedIn post says 800–900+ without a source.";
+    return{text:txt,src:m2.s.filter(function(s){return s.u}).map(function(s){return lk(s.n,s.u)})};
+  }
+  if(/disagree|conflict|differ|gap|inconsisten|why|wrong/.test(q)){
+    var r=LEDGER.map(function(m){return{m:m,s:spreadOf(m)}}).sort(function(a,b){return b.s.pct-a.s.pct});
+    txt="Gap between the lowest and highest source, by metric:\n";r.forEach(function(x){txt+="• "+x.m.name+": "+x.s.pct+"%\n"});
+    txt+="\nOpen the Conflict ledger for each source and the reason.";return{text:txt,src:[]};
+  }
+  return{text:"Atlas has no verified data for that question.\n\nIt covers: GCC counts, office leasing, six-city payroll comparison, state policies and setup-provider claims. Not yet covered: city-level rents, attrition, tier-2 city counts and verified provider delivery records.",src:[]};
+}
+function dedupe(a){var seen={},o=[];a.forEach(function(x){if(x.u&&!seen[x.u]){seen[x.u]=1;o.push(x)}});return o}
+
+function claudeContext(){
+  return JSON.stringify({ledger:LEDGER.map(function(m){return{metric:m.name,unit:m.unit,why:m.why,sources:m.s.map(function(s){return{source:s.n,value:s.t,note:s.note,confidence:s.c}})}}),
+   cities_salary_median_lakh_per_year:CITIES.map(function(c){return{city:c.name,software_engineer:c.swe,senior_6plus:c.sr,leasing:c.h1,activity:c.share,policy:c.pol,policy_status:c.polS}}),
+   state_policies:POL.map(function(p){return{state:p.st,status:KLAB[p.k],kind:p.kind,target:p.target,note:p.note}}),
+   payroll_formula:"team * (senior_share*senior + (1-senior_share)*software_engineer) lakh per year; divide by 100 for crore. Engineering roles only.",
+   not_available:["city-level office rents (only pan-India average Rs 96/sqft/month H1 2026 and one Mumbai lease at Rs 215)","GCC counts for Chennai, Mumbai, Delhi NCR","tier-2 city counts","attrition","verified provider delivery records"]});
+}
+
+var busy=false;
+async function ask(question){
+  question=question.trim();if(!question||busy)return;
+  busy=true;var btn=$("#askbtn");btn.disabled=true;
+  var box=$("#ans");box.innerHTML='<div class="q"></div><p class="empty">Checking the Atlas data…</p>';
+  $(".q",box).textContent=question;
+  var out=null,by="Answered from the Atlas dataset by built-in rules.";
+  try{
+    var sample=window.claude&&window.claude.use?await window.claude.use("sample"):null;
+    if(sample){
+      var prompt="You are Atlas, a careful assistant for a company deciding where in India to set up a Global Capability Centre. Answer ONLY from the DATA below. Do not use outside knowledge and do not guess numbers. If the data does not contain the answer, say Atlas has no verified data for it and say what is missing. When sources disagree, give the range and the reason. For city cost questions use payroll_formula with a 30% senior share unless the user says otherwise, and state that it covers engineering payroll only. Keep the answer under 150 words, plain text, no markdown, and name the sources you used in words.\n\nDATA:\n"+claudeContext()+"\n\nQUESTION: "+question;
+      var res=await sample(prompt,{modelTier:"quick",cache:false});
+      if(res&&res.text&&res.text.trim()){out={text:res.text.trim(),src:[]};by="Answered by Claude using only the Atlas dataset."}
+    }
+  }catch(e){out=null}
+  if(!out){out=localAnswer(question)}
+  box.innerHTML='<div class="q"></div><div class="body"></div><div class="srcline"></div><div class="by"></div>';
+  $(".q",box).textContent=question;
+  out.text.split("\n").forEach(function(line){var p=document.createElement("p");p.textContent=line||" ";if(!line)p.style.margin="0 0 4px";$(".body",box).appendChild(p)});
+  var sl=$(".srcline",box);
+  (out.src||[]).slice(0,8).forEach(function(s){var a=document.createElement("a");a.href=s.u;a.target="_blank";a.rel="noopener";a.textContent=s.t;sl.appendChild(a)});
+  $(".by",box).textContent=by;
+  busy=false;btn.disabled=false;
+}
+
+/* ---------- tabs ---------- */
+var TABS=["ledger","cities","policy","ask"];
+function show(id){
+  TABS.forEach(function(t){var on=t===id;$("#t-"+t).setAttribute("aria-selected",String(on));$("#p-"+t).hidden=!on});
+}
+TABS.forEach(function(t){$("#t-"+t).addEventListener("click",function(){show(t)})});
+$(".tabs").addEventListener("keydown",function(e){
+  var i=TABS.indexOf((document.activeElement.id||"").replace("t-",""));if(i<0)return;
+  if(e.key==="ArrowRight"||e.key==="ArrowLeft"){var n=TABS[(i+(e.key==="ArrowRight"?1:TABS.length-1))%TABS.length];show(n);$("#t-"+n).focus();e.preventDefault()}
+});
+
+/* ---------- init ---------- */
+renderLedger();renderCities();renderPolicy();
+$("#size").addEventListener("input",renderCities);$("#senior").addEventListener("input",renderCities);
+var SQ=["Bengaluru vs Hyderabad for a 500-person GCC","Why do reports disagree on GCC office leasing?","Which states have an official GCC policy?","How many GCCs are there in India?","Can I trust ANSR's track record?","What is the office rent in Pune?"];
+SQ.forEach(function(q){var b=el("button","chip",esc(q));b.type="button";b.onclick=function(){$("#askq").value=q;ask(q)};$("#sugg").appendChild(b)});
+$("#askform").addEventListener("submit",function(e){e.preventDefault();ask($("#askq").value)});
+try{var h=(location.hash||"").replace("#","");if(TABS.indexOf(h)>-1)show(h)}catch(e){}
+window.__atlas={localAnswer:localAnswer,LEDGER:LEDGER,spreadOf:spreadOf};
+})();
+</script>
+
+</body></html>
